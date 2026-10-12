@@ -21,21 +21,26 @@ def predict_match(home_team, away_team):
 @app.route('/api/matches', methods=['GET'])
 def get_matches():
     match_date = request.args.get('date')
-    
     headers = {'X-Auth-Token': API_KEY}
     
-    # Football-Data.org API တွင် ယနေ့ သို့မဟုတ် ရွေးချယ်ထားသော နေ့ရက်အလိုက် ပွဲစဉ်များ တောင်းဆိုခြင်း
-    url = f"{BASE_URL}matches"
+    # Free Tier API တွင် Error မတက်စေရန် ပရီးမီးယားလိဂ် (PL) ပြိုင်ပွဲ၏ ပွဲစဉ်များကို တိုက်ရိုက်ခေါ်ယူခြင်း
+    url = f"{BASE_URL}competitions/PL/matches"
     if match_date:
-        url = f"{BASE_URL}matches?dateFrom={match_date}&dateTo={match_date}"
+        url = f"{BASE_URL}competitions/PL/matches?dateFrom={match_date}&dateTo={match_date}"
 
     try:
         response = requests.get(url, headers=headers)
         
         if response.status_code != 200:
-            return jsonify({"error": "API မှ ဒေတာရယူ၍ မရပါ", "status_code": response.status_code}), 500
+            # အကယ်၍ သတ်မှတ်ရက်တွင် Error ရှိက ယေဘုယျ ပရီးမီးယားလိဂ် ပွဲစဉ်များကို ဆွဲယူရန် ကြိုးစားခြင်း
+            fallback_response = requests.get(f"{BASE_URL}competitions/PL/matches", headers=headers)
+            if fallback_response.status_code == 200:
+                data = fallback_response.json()
+            else:
+                return jsonify({"error": "API မှ ဒေတာရယူ၍ မရပါ", "details": response.text}), 500
+        else:
+            data = response.json()
 
-        data = response.json()
         matches = []
         match_list = data.get('matches', [])
         
