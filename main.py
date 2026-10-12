@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -34,13 +35,49 @@ LEAGUES = [
     {"id": "4422", "name": "Copa Libertadores"}
 ]
 
-def predict_match(home_team, away_team):
+# နာမည်ကြီး အသင်းများ (လက်ရှိရာသီ ခြေစွမ်းထက်မြက်သော အသင်းများ)
+TOP_TEAMS = [
+    "Arsenal", "Manchester City", "Liverpool", "Real Madrid", "Barcelona", 
+    "Bayern Munich", "Inter", "AC Milan", "Juventus", "PSG", "Benfica", "Sporting CP",
+    "Napoli", "Atletico Madrid", "Bayer Leverkusen", "Borussia Dortmund"
+]
+
+def smart_ai_prediction(home_team, away_team):
+    """အသင်းများ၏ အနေအထားကို လေ့လာပြီး လက်တွေ့ဆန်သော ရလဒ်နှင့် နိုင်ခြေများကို တွက်ချက်ခြင်း"""
+    is_home_top = any(t.lower() in home_team.lower() for t in TOP_TEAMS)
+    is_away_top = any(t.lower() in away_team.lower() for t in TOP_TEAMS)
+    
+    # Random seed ကို အသင်းနာမည်အပေါ် မူတည်စေခြင်းဖြင့် ပွဲစဉ်တိုင်းအတွက် ရလဒ် သီးသန့်ထွက်စေရန်
+    seed_val = sum(ord(c) for c in home_team + away_team)
+    random.seed(seed_val)
+    
+    if is_home_top and not is_away_top:
+        scores = ["2 - 0", "3 - 1", "3 - 0", "2 - 1"]
+        score = random.choice(scores)
+        h_chance, d_chance, a_chance = "68%", "20%", "12%"
+        advice = f"{home_team} သည် အိမ်ကွင်းအားသာချက်နှင့်အတူ ဧည့်သည် {away_team} ကို ဖိကစားကာ အနိုင်ယူရန် ရေပန်းစားနေသည်။"
+    elif not is_home_top and is_away_top:
+        scores = ["0 - 2", "1 - 2", "0 - 3", "1 - 3"]
+        score = random.choice(scores)
+        h_chance, d_chance, a_chance = "20%", "25%", "55%"
+        advice = f"အသင်းကြီးဖြစ်သည့် {away_team} က အဝေးကွင်းဖြစ်သော်လည်း တိုက်စစ်ပိုင်း အသာစီးဖြင့် ရလဒ်ဖော်ဆောင်နိုင်ချေရှိသည်။"
+    elif is_home_top and is_away_top:
+        scores = ["1 - 1", "2 - 2", "2 - 1", "1 - 2"]
+        score = random.choice(scores)
+        h_chance, d_chance, a_chance = "40%", "35%", "25%"
+        advice = f"ဥရောပထိပ်တန်းအသင်းနှစ်သင်း ထိပ်တိုက်တွေ့ဆုံမှုဖြစ်၍ အကြိတ်အနယ်ရှိပြီး ဂိုးရလဒ် အပြန်အလှန် ထွက်ပေါ်လာနိုင်ပါသည်။"
+    else:
+        scores = ["1 - 0", "0 - 1", "1 - 1", "0 - 0"]
+        score = random.choice(scores)
+        h_chance, d_chance, a_chance = "45%", "35%", "20%"
+        advice = f"နှစ်သင်း၏ ခြေစွမ်းနီးစပ်သဖြင့် အိမ်ကွင်းဧည့်ကွင်း ရုန်းကန်ရမည့်ပွဲဖြစ်ပြီး အမှားနည်းသူ အနိုင်ရရှိသွားပါမည်။"
+
     return {
-        "predicted_score": "2 - 1",
-        "home_win_chance": "55%",
-        "draw_chance": "25%",
-        "away_win_chance": "20%",
-        "ai_advice": f"{home_team} သည် အိမ်ကွင်းတွင် ခြေစွမ်းပိုမို သာလွန်နေပါသည်။"
+        "predicted_score": score,
+        "home_win_chance": h_chance,
+        "draw_chance": d_chance,
+        "away_win_chance": a_chance,
+        "ai_advice": advice
     }
 
 @app.route('/api/matches', methods=['GET'])
@@ -66,7 +103,6 @@ def get_matches():
                             home = event.get('strHomeTeam', '')
                             away = event.get('strAwayTeam', '')
                             
-                            # အမှိုက်အချက်အလက်များ သို့မဟုတ် အခြားအားကစားနည်းများ ပါမလာစေရန် စစ်ထုတ်ခြင်း
                             if not home or not away or "Rams" in home or "Bills" in home or "Miami" in home:
                                 continue
 
@@ -77,7 +113,7 @@ def get_matches():
                                 
                             utc_date = f"{match_date}T{match_time}Z"
                             seen_match_ids.add(event_id)
-                            prediction = predict_match(home, away)
+                            prediction = smart_ai_prediction(home, away)
 
                             all_matches.append({
                                 "id": event_id,
