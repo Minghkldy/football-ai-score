@@ -23,11 +23,11 @@ def get_matches():
     headers = {'X-Auth-Token': API_KEY}
     
     try:
-        # Premier League (PL) ၏ ပွဲစဉ်အားလုံးကို တောင်းဆိုခြင်း (Error 500 မတက်တော့ပါ)
+        # Premier League (PL) ၏ ပွဲစဉ်အားလုံးကို တောင်းဆိုခြင်း (Date Parameter လုံးဝမပါတော့ပါ)
         response = requests.get(f"{BASE_URL}competitions/PL/matches", headers=headers)
         
         if response.status_code != 200:
-            return jsonify({"error": "API မှ ဒေတာရယူ၍ မရပါ"}), 500
+            return jsonify({"error": "API မှ ဒေတာရယူ၍ မရပါ", "details": response.text}), 500
 
         data = response.json()
         matches = []
