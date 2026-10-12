@@ -1,3 +1,4 @@
+import os
 import requests
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -5,7 +6,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # Frontend မှ လာရောက် ချိတ်ဆက်နိုင်ရန်
 
-API_KEY = "4e8538ba274a14e60a063277b1bcc2253"  # Football-Data.org မှရသော key ထည့်ပါ
+API_KEY = "4e8538ba274a14e60a063277b1bcc2253"  # သင့်ရဲ့ API Key
 BASE_URL = "https://api.football-data.org/v4/"
 
 def predict_match(home_team, away_team):
@@ -49,4 +50,5 @@ def get_matches():
     return jsonify(matches)
 
 if __name__ == '__main__':
-    app.run(port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
