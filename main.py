@@ -5,7 +5,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # Frontend မှ လာရောက် ချိတ်ဆက်နိုင်ရန်
 
-API_KEY = "YOUR_FOOTBALL_DATA_API_KEY"  # Football-Data.org မှရသော key ထည့်ပါ
+API_KEY = "4e8538ba274a14e60a063277b1bcc2253"  # Football-Data.org မှရသော key ထည့်ပါ
 BASE_URL = "https://api.football-data.org/v4/"
 
 def predict_match(home_team, away_team):
