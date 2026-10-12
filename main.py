@@ -6,14 +6,18 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# TheSportsDB တွင် လိဂ်အလိုက် သတ်မှတ်ထားသော ID များ
+# လိဂ်အသစ်များပါ ထပ်မံထည့်သွင်းထားသော TheSportsDB ID များ
 LEAGUES = [
-    {"id": "4328", "name": "Premier League"},
+    {"id": "4328", "name": "English Premier League"},
     {"id": "4335", "name": "Spanish La Liga"},
     {"id": "4331", "name": "German Bundesliga"},
     {"id": "4332", "name": "Italian Serie A"},
+    {"id": "4334", "name": "French Ligue 1"},
     {"id": "4344", "name": "Portuguese Primeira Liga"},
-    {"id": "4351", "name": "Brazilian Serie A"}
+    {"id": "4351", "name": "Brazilian Serie A"},
+    {"id": "4346", "name": "Dutch Eredivisie"},
+    {"id": "4330", "name": "Scottish Premiership"},
+    {"id": "4480", "name": "UEFA Champions League"}
 ]
 
 def predict_match(home_team, away_team):
@@ -58,7 +62,6 @@ def get_matches():
                             "prediction": prediction
                         })
 
-        # အကယ်၍ ပွဲစဉ် မရှိသေးပါက သို့မဟုတ် API ချိတ်ဆက်မှု အဆင်မပြေပါက
         if not all_matches:
             all_matches = [
                 {
@@ -67,7 +70,7 @@ def get_matches():
                     "status": "SCHEDULED",
                     "homeTeam": "Arsenal",
                     "awayTeam": "Chelsea",
-                    "competition": "Premier League",
+                    "competition": "English Premier League",
                     "prediction": predict_match("Arsenal", "Chelsea")
                 }
             ]
