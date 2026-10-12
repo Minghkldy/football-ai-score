@@ -6,8 +6,15 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-API_KEY = "4e8538ba274a14e60a063277b1bcc2253"
-BASE_URL = "https://api.football-data.org/v4/"
+# TheSportsDB တွင် လိဂ်အလိုက် သတ်မှတ်ထားသော ID များ
+LEAGUES = [
+    {"id": "4328", "name": "Premier League"},
+    {"id": "4335", "name": "Spanish La Liga"},
+    {"id": "4331", "name": "German Bundesliga"},
+    {"id": "4332", "name": "Italian Serie A"},
+    {"id": "4344", "name": "Portuguese Primeira Liga"},
+    {"id": "4351", "name": "Brazilian Serie A"}
+]
 
 def predict_match(home_team, away_team):
     return {
@@ -20,64 +27,55 @@ def predict_match(home_team, away_team):
 
 @app.route('/api/matches', methods=['GET'])
 def get_matches():
-    headers = {'X-Auth-Token': API_KEY}
+    all_matches = []
     
     try:
-        # ပရီးမီးယားလိဂ် (PL) နှင့် အခြားလိဂ်များကိုပါ စုံလင်စွာ ဆွဲထုတ်ရန် (သို့မဟုတ် Error ကင်းစေရန်)
-        response = requests.get(f"{BASE_URL}competitions/PL/matches", headers=headers)
-        
-        if response.status_code != 200:
-            # အကယ်၍ API Error ရှိက လာမည့်ရက်များအတွက် မှန်ကန်သော ရက်စွဲများဖြင့် နမူနာပွဲစဉ်များကို ရက်အလိုက် တိကျစွာပြရန်
-            real_matches = [
+        for league in LEAGUES:
+            url = f"https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id={league['id']}"
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                events = data.get('events', [])
+                
+                if events:
+                    for event in events:
+                        home = event.get('strHomeTeam', 'Home Team')
+                        away = event.get('strAwayTeam', 'Away Team')
+                        match_date = event.get('dateEvent', '2026-10-12')
+                        match_time = event.get('strTime', '15:00:00')
+                        utc_date = f"{match_date}T{match_time}Z"
+                        
+                        prediction = predict_match(home, away)
+
+                        all_matches.append({
+                            "id": event.get('idEvent'),
+                            "utcDate": utc_date,
+                            "status": event.get('strStatus') or "SCHEDULED",
+                            "homeTeam": home,
+                            "awayTeam": away,
+                            "competition": league['name'],
+                            "prediction": prediction
+                        })
+
+        # အကယ်၍ ပွဲစဉ် မရှိသေးပါက သို့မဟုတ် API ချိတ်ဆက်မှု အဆင်မပြေပါက
+        if not all_matches:
+            all_matches = [
                 {
-                    "id": 401,
+                    "id": 1,
                     "utcDate": "2026-10-12T18:30:00Z",
                     "status": "SCHEDULED",
                     "homeTeam": "Arsenal",
                     "awayTeam": "Chelsea",
+                    "competition": "Premier League",
                     "prediction": predict_match("Arsenal", "Chelsea")
-                },
-                {
-                    "id": 402,
-                    "utcDate": "2026-10-13T20:00:00Z",
-                    "status": "SCHEDULED",
-                    "homeTeam": "Manchester United",
-                    "awayTeam": "Liverpool",
-                    "prediction": predict_match("Manchester United", "Liverpool")
-                },
-                {
-                    "id": 403,
-                    "utcDate": "2026-10-13T22:30:00Z",
-                    "status": "SCHEDULED",
-                    "homeTeam": "Manchester City",
-                    "awayTeam": "Tottenham Hotspur",
-                    "prediction": predict_match("Manchester City", "Tottenham Hotspur")
                 }
             ]
-            return jsonify(real_matches)
 
-        data = response.json()
-        matches = []
-        match_list = data.get('matches', [])
-        
-        for match in match_list:
-            home = match.get('homeTeam', {}).get('name', 'Unknown Team')
-            away = match.get('awayTeam', {}).get('name', 'Unknown Team')
-            prediction = predict_match(home, away)
-
-            matches.append({
-                "id": match.get('id'),
-                "utcDate": match.get('utcDate'),
-                "status": match.get('status'),
-                "homeTeam": home,
-                "awayTeam": away,
-                "prediction": prediction
-            })
-
-        return jsonify(matches)
+        return jsonify(all_matches)
 
     except Exception as e:
-        return jsonify([])
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
