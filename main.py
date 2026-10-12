@@ -6,7 +6,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# TheSportsDB တွင် လိဂ်အလိုက် သတ်မှတ်ထားသော ID များ
+# ချန်ပီယံလိဂ်၊ ယူရိုပါလိဂ်၊ ကာရာဘောင်းဖလားနှင့် အခြားလိဂ်များပါ ထည့်သွင်းထားသော TheSportsDB ID များ
 LEAGUES = [
     {"id": "4328", "name": "English Premier League"},
     {"id": "4335", "name": "Spanish La Liga"},
@@ -17,7 +17,9 @@ LEAGUES = [
     {"id": "4351", "name": "Brazilian Serie A"},
     {"id": "4346", "name": "Dutch Eredivisie"},
     {"id": "4330", "name": "Scottish Premiership"},
-    {"id": "4480", "name": "UEFA Champions League"}
+    {"id": "4480", "name": "UEFA Champions League"},
+    {"id": "4697", "name": "UEFA Europa League"},
+    {"id": "4391", "name": "Carabao Cup (League Cup)"}
 ]
 
 def predict_match(home_team, away_team):
