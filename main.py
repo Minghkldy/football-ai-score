@@ -6,8 +6,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-API_KEY = "4e8538ba274a14e60a063277b1bcc2253"
-BASE_URL = "https://api.football-data.org/v4/"
+# TheSportsDB API (English Premier League အတွက် Free Endpoint - ID: 4328)
+LEAGUE_URL = "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4328"
 
 def predict_match(home_team, away_team):
     return {
@@ -20,32 +20,42 @@ def predict_match(home_team, away_team):
 
 @app.route('/api/matches', methods=['GET'])
 def get_matches():
-    headers = {'X-Auth-Token': API_KEY}
-    
     try:
-        response = requests.get(f"{BASE_URL}competitions/PL/matches", headers=headers)
+        response = requests.get(LEAGUE_URL)
         
-        # API ဘက်မှ Error တက်လာပါက အကြောင်းရင်းအမှန်ကို ပြန်ပြရန်
         if response.status_code != 200:
-            return jsonify({
-                "api_error": True,
-                "status_code": response.status_code,
-                "message": response.text
-            }), 500
+            return jsonify({"error": "Data ဆွဲယူ၍ မရပါ"}), 500
 
         data = response.json()
+        events = data.get('events', [])
         matches = []
-        match_list = data.get('matches', [])
-        
-        for match in match_list:
-            home = match.get('homeTeam', {}).get('name', 'Unknown Team')
-            away = match.get('awayTeam', {}).get('name', 'Unknown Team')
+
+        if not events:
+            # ပွဲစဉ် မရှိသေးပါက နမူနာပြရန်
+            return jsonify([
+                {
+                    "id": 1,
+                    "utcDate": "2026-10-12T15:00:00Z",
+                    "status": "SCHEDULED",
+                    "homeTeam": "Arsenal",
+                    "awayTeam": "Chelsea",
+                    "prediction": predict_match("Arsenal", "Chelsea")
+                }
+            ])
+
+        for event in events:
+            home = event.get('strHomeTeam', 'Home Team')
+            away = event.get('strAwayTeam', 'Away Team')
+            match_date = event.get('dateEvent', '2026-10-12')
+            match_time = event.get('strTime', '15:00:00')
+            utc_date = f"{match_date}T{match_time}Z"
+            
             prediction = predict_match(home, away)
 
             matches.append({
-                "id": match.get('id'),
-                "utcDate": match.get('utcDate'),
-                "status": match.get('status'),
+                "id": event.get('idEvent'),
+                "utcDate": utc_date,
+                "status": event.get('strStatus') or "SCHEDULED",
                 "homeTeam": home,
                 "awayTeam": away,
                 "prediction": prediction
@@ -54,7 +64,7 @@ def get_matches():
         return jsonify(matches)
 
     except Exception as e:
-        return jsonify({"api_error": True, "message": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
