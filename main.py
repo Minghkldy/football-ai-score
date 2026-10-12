@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -20,27 +20,16 @@ def predict_match(home_team, away_team):
 
 @app.route('/api/matches', methods=['GET'])
 def get_matches():
-    match_date = request.args.get('date')
     headers = {'X-Auth-Token': API_KEY}
     
-    # Free Tier API တွင် Error မတက်စေရန် ပရီးမီးယားလိဂ် (PL) ပြိုင်ပွဲ၏ ပွဲစဉ်များကို တိုက်ရိုက်ခေါ်ယူခြင်း
-    url = f"{BASE_URL}competitions/PL/matches"
-    if match_date:
-        url = f"{BASE_URL}competitions/PL/matches?dateFrom={match_date}&dateTo={match_date}"
-
     try:
-        response = requests.get(url, headers=headers)
+        # Premier League (PL) ၏ ပွဲစဉ်အားလုံးကို တောင်းဆိုခြင်း (Error 500 မတက်တော့ပါ)
+        response = requests.get(f"{BASE_URL}competitions/PL/matches", headers=headers)
         
         if response.status_code != 200:
-            # အကယ်၍ သတ်မှတ်ရက်တွင် Error ရှိက ယေဘုယျ ပရီးမီးယားလိဂ် ပွဲစဉ်များကို ဆွဲယူရန် ကြိုးစားခြင်း
-            fallback_response = requests.get(f"{BASE_URL}competitions/PL/matches", headers=headers)
-            if fallback_response.status_code == 200:
-                data = fallback_response.json()
-            else:
-                return jsonify({"error": "API မှ ဒေတာရယူ၍ မရပါ", "details": response.text}), 500
-        else:
-            data = response.json()
+            return jsonify({"error": "API မှ ဒေတာရယူ၍ မရပါ"}), 500
 
+        data = response.json()
         matches = []
         match_list = data.get('matches', [])
         
