@@ -20,40 +20,43 @@ def predict_match(home_team, away_team):
 
 @app.route('/api/matches', methods=['GET'])
 def get_matches():
-    # Frontend ကနေ ပို့လိုက်တဲ့ နေ့ရက် (Date) ကို ဖမ်းယူခြင်း (မပါလာရင် ယနေ့ရက်စွဲကို ယူမည်)
     match_date = request.args.get('date')
     
     headers = {'X-Auth-Token': API_KEY}
     
-    # Football-Data.org API တွင် သတ်မှတ်ထားသော နေ့ရက်အလိုက် ပွဲစဉ်တောင်းဆိုခြင်း
+    # Football-Data.org API တွင် ယနေ့ သို့မဟုတ် ရွေးချယ်ထားသော နေ့ရက်အလိုက် ပွဲစဉ်များ တောင်းဆိုခြင်း
     url = f"{BASE_URL}matches"
     if match_date:
         url = f"{BASE_URL}matches?dateFrom={match_date}&dateTo={match_date}"
 
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code != 200:
-        return jsonify({"error": "Data ဆွဲယူ၍ မရပါ"}), 500
+    try:
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code != 200:
+            return jsonify({"error": "API မှ ဒေတာရယူ၍ မရပါ", "status_code": response.status_code}), 500
 
-    data = response.json()
-    matches = []
-    match_list = data.get('matches', [])
-    
-    for match in match_list:
-        home = match.get('homeTeam', {}).get('name', 'Home Team')
-        away = match.get('awayTeam', {}).get('name', 'Away Team')
-        prediction = predict_match(home, away)
+        data = response.json()
+        matches = []
+        match_list = data.get('matches', [])
+        
+        for match in match_list:
+            home = match.get('homeTeam', {}).get('name', 'Unknown Team')
+            away = match.get('awayTeam', {}).get('name', 'Unknown Team')
+            prediction = predict_match(home, away)
 
-        matches.append({
-            "id": match.get('id'),
-            "utcDate": match.get('utcDate'),
-            "status": match.get('status'),
-            "homeTeam": home,
-            "awayTeam": away,
-            "prediction": prediction
-        })
+            matches.append({
+                "id": match.get('id'),
+                "utcDate": match.get('utcDate'),
+                "status": match.get('status'),
+                "homeTeam": home,
+                "awayTeam": away,
+                "prediction": prediction
+            })
 
-    return jsonify(matches)
+        return jsonify(matches)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
