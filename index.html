@@ -31,62 +31,73 @@
 
     <script>
         const BACKEND_URL = "https://football-ai-score.onrender.com/api/matches";
+        let allMatches = [];
 
-        // ယနေ့ရက်စွဲကို YYYY-MM-DD ပုံစံဖြင့် ရယူရန်
         const today = new Date().toISOString().split('T')[0];
         const dateInput = document.getElementById('match-date');
         dateInput.value = today;
 
-        // နေ့ရက်ပြောင်းလဲသည့်အခါ ပွဲစဉ်အသစ်ခေါ်ယူရန်
         dateInput.addEventListener('change', (e) => {
-            fetchMatches(e.target.value);
+            renderMatches(e.target.value);
         });
 
-        async function fetchMatches(date = today) {
+        async function fetchAllMatches() {
             const container = document.getElementById('matches-list');
-            container.innerHTML = `<p class="text-gray-400 text-center">ပွဲစဉ်များကို ရှာဖွေနေပါသည်...</p>`;
-
             try {
-                const response = await fetch(`${BACKEND_URL}?date=${date}`);
-                const matches = await response.json();
+                const response = await fetch(BACKEND_URL);
+                allMatches = await response.json();
 
-                container.innerHTML = '';
-
-                if (!matches || matches.length === 0) {
-                    container.innerHTML = `<p class="text-gray-400 text-center">ရွေးချယ်ထားသောရက်တွင် ပွဲစဉ်မရှိပါ</p>`;
+                if (!Array.isArray(allMatches)) {
+                    container.innerHTML = `<p class="text-red-400 text-center">ဒေတာရယူရာတွင် အမှားအယွင်း ရှိပါသည်</p>`;
                     return;
                 }
 
-                matches.forEach(match => {
-                    const matchTime = new Date(match.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    
-                    const html = `
-                        <div class="card p-4 shadow-lg border border-gray-800">
-                            <div class="text-center text-xs text-gray-400 mb-2">${matchTime} (${match.status})</div>
-                            <div class="flex justify-between items-center text-lg font-semibold mb-3">
-                                <span class="w-2/5 text-right">${match.homeTeam}</span>
-                                <span class="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300">VS</span>
-                                <span class="w-2/5 text-left">${match.awayTeam}</span>
-                            </div>
-                            <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-800 text-sm">
-                                <div class="flex justify-between items-center text-green-400 font-medium mb-1">
-                                    <span>🤖 AI Prediction: ${match.prediction.predicted_score}</span>
-                                    <span class="text-xs text-gray-400">Home Win: ${match.prediction.home_win_chance}</span>
-                                </div>
-                                <p class="text-gray-300 text-xs italic">${match.prediction.ai_advice}</p>
-                            </div>
-                        </div>
-                    `;
-                    container.innerHTML += html;
-                });
-
+                renderMatches(dateInput.value);
             } catch (error) {
-                container.innerHTML = `<p class="text-red-400 text-center">ဒေတာဆွဲယူရာတွင် အမှားအယွင်း ရှိIပါသည်</p>`;
+                container.innerHTML = `<p class="text-red-400 text-center">ဆာဗာသို့ ချိတ်ဆက်၍ မရပါ။</p>`;
             }
         }
 
-        // ပထမအကြိမ် စတင်ဖွင့်ချိန်တွင် ယနေ့ပွဲစဉ်များ ဆွဲရန်
-        fetchMatches(today);
+        function renderMatches(selectedDate) {
+            const container = document.getElementById('matches-list');
+            container.innerHTML = '';
+
+            // ရွေးချယ်ထားသော ရက်စွဲ (YYYY-MM-DD) နှင့် ကိုက်ညီသော ပွဲစဉ်များကိုသာ စစ်ထုတ်ခြင်း
+            const filteredMatches = allMatches.filter(match => {
+                if (!match.utcDate) return false;
+                return match.utcDate.startsWith(selectedDate);
+            });
+
+            if (filteredMatches.length === 0) {
+                container.innerHTML = `<p class="text-gray-400 text-center">ရွေးချယ်ထားသောရက် (${selectedDate}) တွင် ပွဲစဉ်မရှိပါ</p>`;
+                return;
+            }
+
+            filteredMatches.forEach(match => {
+                const matchTime = new Date(match.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                const html = `
+                    <div class="card p-4 shadow-lg border border-gray-800">
+                        <div class="text-center text-xs text-gray-400 mb-2">${matchTime} (${match.status})</div>
+                        <div class="flex justify-between items-center text-lg font-semibold mb-3">
+                            <span class="w-2/5 text-right">${match.homeTeam}</span>
+                            <span class="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300">VS</span>
+                            <span class="w-2/5 text-left">${match.awayTeam}</span>
+                        </div>
+                        <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-800 text-sm">
+                            <div class="flex justify-between items-center text-green-400 font-medium mb-1">
+                               <span>🤖 AI Prediction: ${match.prediction.predicted_score}</span>
+                                <span class="text-xs text-gray-400">Home Win: ${match.prediction.home_win_chance}</span>
+                            </div>
+                            <p class="text-gray-300 text-xs italic">${match.prediction.ai_advice}</p>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        fetchAllMatches();
     </script>
 </body>
 </html>
