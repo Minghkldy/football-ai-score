@@ -44,6 +44,7 @@
         async function fetchAllMatches() {
             const container = document.getElementById('matches-list');
             try {
+                // Backend သို့ ?date ပါသော parameter လုံးဝမပို့တော့ဘဲ အားလုံးကို တောင်းမည်
                 const response = await fetch(BACKEND_URL);
                 allMatches = await response.json();
 
@@ -86,7 +87,7 @@
                         </div>
                         <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-800 text-sm">
                             <div class="flex justify-between items-center text-green-400 font-medium mb-1">
-                               <span>🤖 AI Prediction: ${match.prediction.predicted_score}</span>
+                                <span>🤖 AI Prediction: ${match.prediction.predicted_score}</span>
                                 <span class="text-xs text-gray-400">Home Win: ${match.prediction.home_win_chance}</span>
                             </div>
                             <p class="text-gray-300 text-xs italic">${match.prediction.ai_advice}</p>
