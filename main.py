@@ -6,7 +6,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# လိဂ်အသစ်များပါ ထပ်မံထည့်သွင်းထားသော TheSportsDB ID များ
+# TheSportsDB တွင် လိဂ်အလိုက် သတ်မှတ်ထားသော ID များ
 LEAGUES = [
     {"id": "4328", "name": "English Premier League"},
     {"id": "4335", "name": "Spanish La Liga"},
@@ -36,32 +36,35 @@ def get_matches():
     try:
         for league in LEAGUES:
             url = f"https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id={league['id']}"
-            response = requests.get(url)
-            
-            if response.status_code == 200:
-                data = response.json()
-                events = data.get('events', [])
-                
-                if events:
-                    for event in events:
-                        home = event.get('strHomeTeam', 'Home Team')
-                        away = event.get('strAwayTeam', 'Away Team')
-                        match_date = event.get('dateEvent', '2026-10-12')
-                        match_time = event.get('strTime', '15:00:00')
-                        utc_date = f"{match_date}T{match_time}Z"
-                        
-                        prediction = predict_match(home, away)
+            try:
+                response = requests.get(url, timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    events = data.get('events', [])
+                    
+                    if events:
+                        for event in events:
+                            home = event.get('strHomeTeam', 'Home Team')
+                            away = event.get('strAwayTeam', 'Away Team')
+                            match_date = event.get('dateEvent', '2026-10-12')
+                            match_time = event.get('strTime', '15:00:00')
+                            utc_date = f"{match_date}T{match_time}Z"
+                            
+                            prediction = predict_match(home, away)
 
-                        all_matches.append({
-                            "id": event.get('idEvent'),
-                            "utcDate": utc_date,
-                            "status": event.get('strStatus') or "SCHEDULED",
-                            "homeTeam": home,
-                            "awayTeam": away,
-                            "competition": league['name'],
-                            "prediction": prediction
-                        })
+                            all_matches.append({
+                                "id": event.get('idEvent'),
+                                "utcDate": utc_date,
+                                "status": event.get('strStatus') or "SCHEDULED",
+                                "homeTeam": home,
+                                "awayTeam": away,
+                                "competition": league['name'],
+                                "prediction": prediction
+                            })
+            except requests.exceptions.RequestException:
+                continue
 
+        # အကယ်၍ API မှ ဒေတာ လုံးဝ မရခဲ့ပါက Website မပြိုကျစေရန် နမူနာပွဲစဉ်ပြရန်
         if not all_matches:
             all_matches = [
                 {
@@ -78,7 +81,7 @@ def get_matches():
         return jsonify(all_matches)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify([])
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
