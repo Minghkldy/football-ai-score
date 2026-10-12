@@ -1,19 +1,17 @@
 import os
 import requests
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# သင့်ရဲ့ API-Football Key ထည့်ရန်
 API_KEY = "9c7229c6da02c8846916bfd3d374a5e2" 
 HEADERS = {
     'x-apisports-key': API_KEY
 }
 BASE_URL = "https://v3.football.api-sports.io/"
 
-# အဓိက လိဂ်များ၏ API-Football IDs
 LEAGUES = [
     {"id": 39, "name": "English Premier League"},
     {"id": 140, "name": "Spanish La Liga"},
@@ -23,7 +21,6 @@ LEAGUES = [
 ]
 
 def get_standings(league_id, season=2026):
-    """လိဂ်အလိုက် လက်ရှိ အမှတ်ပေးဇယားကို ဆွဲထုတ်ခြင်း"""
     try:
         url = f"{BASE_URL}standings?league={league_id}&season={season}"
         response = requests.get(url, headers=HEADERS, timeout=5)
@@ -42,24 +39,22 @@ def get_standings(league_id, season=2026):
                     }
                 return standings_dict
     except Exception as e:
-        print(f"Error fetching standings: {e}")
+        print(f"Error standings: {e}")
     return {}
 
-def predict_match_with_standings(home_team, away_team, standings):
-    """အမှတ်ပေးဇယား အဆင့်နှင့် ဖောင်ကို အခြေခံ၍ AI ခန့်မှန်းခြင်း"""
+def predict_match(home_team, away_team, standings):
     home_stats = standings.get(home_team, {})
     away_stats = standings.get(away_team, {})
     
     home_pos = home_stats.get('position', 10)
     away_pos = away_stats.get('position', 10)
     
-    # ဇယားအပေါ်ပိုင်းနှင့် အောက်ပိုင်း အခြေအနေအပေါ် မူတည်ပြီး ခန့်မှန်းချက်ထုတ်ခြင်း
     if home_pos < away_pos:
-        score = "2 - 1" if home_pos + 3 < away_pos else "1 - 0"
+        score = "2 - 1"
         h_chance, d_chance, a_chance = "65%", "20%", "15%"
         advice = f"{home_team} (အဆင့် {home_pos}) သည် လက်ရှိဇယားရပ်တည်မှုအသာစီးဖြင့် {away_team} (အဆင့် {away_pos}) ကို ဖိကစားနိုင်ချေရှိသည်။"
     elif home_pos > away_pos:
-        score = "1 - 2" if away_pos + 3 < home_pos else "0 - 1"
+        score = "1 - 2"
         h_chance, d_chance, a_chance = "20%", "25%", "55%"
         advice = f"ဇယားအဆင့်ပိုမြင့်နေသည့် ဧည့်သည်အသင်း {away_team} က အဝေးကွင်းတွင် ခြေစွမ်းပြနိုင်ချေရှိသည်။"
     else:
@@ -77,6 +72,8 @@ def predict_match_with_standings(home_team, away_team, standings):
 
 @app.route('/api/matches', methods=['GET'])
 def get_matches():
+    # Frontend က တောင်းတဲ့ ရက်စွဲကို ယူရန် (မပါရင် လက်ရှိရက်ကို သုံးရန်)
+    match_date = request.args.get('date')
     all_matches = []
     
     try:
@@ -84,11 +81,14 @@ def get_matches():
             league_id = league['id']
             league_name = league['name']
             
-            # ၁။ အမှတ်ပေးဇယား ဆွဲထုတ်ခြင်း
             standings = get_standings(league_id, season=2026)
             
-            # ၂။ လိဂ်၏ လာမည့်ပွဲစဉ်များကို ဆွဲထုတ်ခြင်း (လက်ရှိ ၂၀၂၆/၂၀၂၇ ရာသီ)
-            url = f"{BASE_URL}fixtures?league={league_id}&season=2026&next=10"
+            # သတ်မှတ်ထားသော ရက်စွဲ (သို့မဟုတ်) လာမည့်ပွဲစဉ်များကို ဆွဲထုတ်ရန်
+            if match_date:
+                url = f"{BASE_URL}fixtures?league={league_id}&season=2026&date={match_date}"
+            else:
+                url = f"{BASE_URL}fixtures?league={league_id}&season=2026&next=5"
+                
             response = requests.get(url, headers=HEADERS, timeout=5)
             
             if response.status_code == 200:
@@ -103,8 +103,7 @@ def get_matches():
                     home = fixture['teams']['home']['name']
                     away = fixture['teams']['away']['name']
                     
-                    # တကယ့် ဒေတာများကို အခြေခံ၍ AI ခန့်မှန်းချက်ထုတ်ခြင်း
-                    prediction = predict_match_with_standings(home, away, standings)
+                    prediction = predict_match(home, away, standings)
 
                     all_matches.append({
                         "id": fixture_id,
