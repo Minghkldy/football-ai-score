@@ -1,6 +1,6 @@
 import os
 import requests
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -20,76 +20,40 @@ def predict_match(home_team, away_team):
 
 @app.route('/api/matches', methods=['GET'])
 def get_matches():
-    try:
-        headers = {'X-Auth-Token': API_KEY}
-        response = requests.get(f"{BASE_URL}matches", headers=headers)
-        
-        if response.status_code != 200:
-            # API Error ဖြစ်ခဲ့လျှင် Dummy Data (နမူနာပွဲစဉ်) ပြန်ပေးရန် (Website မပြိုကျစေရန်)
-            dummy_matches = [
-                {
-                    "id": 1,
-                    "utcDate": "2026-10-12T15:00:00Z",
-                    "status": "SCHEDULED",
-                    "homeTeam": "Arsenal",
-                    "awayTeam": "Chelsea",
-                    "prediction": predict_match("Arsenal", "Chelsea")
-                },
-                {
-                    "id": 2,
-                    "utcDate": "2026-10-12T17:30:00Z",
-                    "status": "SCHEDULED",
-                    "homeTeam": "Manchester City",
-                    "awayTeam": "Liverpool",
-                    "prediction": predict_match("Manchester City", "Liverpool")
-                }
-            ]
-            return jsonify(dummy_matches)
+    # Frontend ကနေ ပို့လိုက်တဲ့ နေ့ရက် (Date) ကို ဖမ်းယူခြင်း (မပါလာရင် ယနေ့ရက်စွဲကို ယူမည်)
+    match_date = request.args.get('date')
+    
+    headers = {'X-Auth-Token': API_KEY}
+    
+    # Football-Data.org API တွင် သတ်မှတ်ထားသော နေ့ရက်အလိုက် ပွဲစဉ်တောင်းဆိုခြင်း
+    url = f"{BASE_URL}matches"
+    if match_date:
+        url = f"{BASE_URL}matches?dateFrom={match_date}&dateTo={match_date}"
 
-        data = response.json()
-        matches = []
-        match_list = data.get('matches', [])
-        
-        for match in match_list[:5]:
-            home = match.get('homeTeam', {}).get('name', 'Home Team')
-            away = match.get('awayTeam', {}).get('name', 'Away Team')
-            prediction = predict_match(home, away)
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        return jsonify({"error": "Data ဆွဲယူ၍ မရပါ"}), 500
 
-            matches.append({
-                "id": match.get('id'),
-                "utcDate": match.get('utcDate'),
-                "status": match.get('status'),
-                "homeTeam": home,
-                "awayTeam": away,
-                "prediction": prediction
-            })
-            
-        if not matches:
-            # ပွဲစဉ် မရှိသေးပါကလည်း နမူနာပြရန်
-            matches = [
-                {
-                    "id": 1,
-                    "utcDate": "2026-10-12T15:00:00Z",
-                    "status": "SCHEDULED",
-                    "homeTeam": "Arsenal",
-                    "awayTeam": "Chelsea",
-                    "prediction": predict_match("Arsenal", "Chelsea")
-                }
-            ]
+    data = response.json()
+    matches = []
+    match_list = data.get('matches', [])
+    
+    for match in match_list:
+        home = match.get('homeTeam', {}).get('name', 'Home Team')
+        away = match.get('awayTeam', {}).get('name', 'Away Team')
+        prediction = predict_match(home, away)
 
-        return jsonify(matches)
-    except Exception as e:
-        # ဘယ်လို Error တက်တက် Website မှာ စာရင်းပေါ်လာစေရန် Safe Fallback
-        return jsonify([
-            {
-                "id": 1,
-                "utcDate": "2026-10-12T15:00:00Z",
-                "status": "SCHEDULED",
-                "homeTeam": "Manchester United",
-                "awayTeam": "Tottenham",
-                "prediction": predict_match("Manchester United", "Tottenham")
-            }
-        ])
+        matches.append({
+            "id": match.get('id'),
+            "utcDate": match.get('utcDate'),
+            "status": match.get('status'),
+            "homeTeam": home,
+            "awayTeam": away,
+            "prediction": prediction
+        })
+
+    return jsonify(matches)
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
