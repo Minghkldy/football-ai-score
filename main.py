@@ -7,7 +7,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# TheSportsDB တွင် ရရှိနိုင်သော ကမ္ဘာတစ်ဝှမ်းမှ လိဂ်များနှင့် ဖလားပြိုင်ပွဲများ အားလုံး
+# TheSportsDB တွင် ရရှိနိုင်သော ကမ္ဘာတစ်ဝှမ်းမှ လိဂ်များနှင့် ဖလားပြိုင်ပွဲများ
 LEAGUES = [
     {"id": "4328", "name": "English Premier League"},
     {"id": "4335", "name": "Spanish La Liga"},
@@ -35,42 +35,60 @@ LEAGUES = [
     {"id": "4422", "name": "Copa Libertadores"}
 ]
 
-# နာမည်ကြီး အသင်းများ (လက်ရှိရာသီ ခြေစွမ်းထက်မြက်သော အသင်းများ)
-TOP_TEAMS = [
+# လက်ရှိ 2026/2027 ရာသီတွင် ထိပ်တန်းဖောင်နှင့် ရပ်တည်မှုရှိသော အသင်းကြီးများ
+ELITE_TEAMS = [
     "Arsenal", "Manchester City", "Liverpool", "Real Madrid", "Barcelona", 
     "Bayern Munich", "Inter", "AC Milan", "Juventus", "PSG", "Benfica", "Sporting CP",
-    "Napoli", "Atletico Madrid", "Bayer Leverkusen", "Borussia Dortmund"
+    "Napoli", "Atletico Madrid", "Bayer Leverkusen", "Borussia Dortmund", "Aston Villa", "Tottenham"
 ]
 
-def smart_ai_prediction(home_team, away_team):
-    """အသင်းများ၏ အနေအထားကို လေ့လာပြီး လက်တွေ့ဆန်သော ရလဒ်နှင့် နိုင်ခြေများကို တွက်ချက်ခြင်း"""
-    is_home_top = any(t.lower() in home_team.lower() for t in TOP_TEAMS)
-    is_away_top = any(t.lower() in away_team.lower() for t in TOP_TEAMS)
+STRONG_TEAMS = [
+    "Chelsea", "Manchester United", "Newcastle", "Villarreal", "Real Sociedad", 
+    "RB Leipzig", "Roma", "Lazio", "Atalanta", "Marseille", "Monaco", "Porto"
+]
+
+def advanced_ai_analysis(home_team, away_team):
+    """အသင်းနှစ်သင်း၏ ခြေစွမ်းနှင့် အဆင့်အတန်းအပေါ်မူတည်၍ အသေးစိတ် တွက်ချက်ခြင်း"""
     
-    # Random seed ကို အသင်းနာမည်အပေါ် မူတည်စေခြင်းဖြင့် ပွဲစဉ်တိုင်းအတွက် ရလဒ် သီးသန့်ထွက်စေရန်
-    seed_val = sum(ord(c) for c in home_team + away_team)
-    random.seed(seed_val)
+    # ပွဲစဉ်တစ်ခုချင်းစီအတွက် ထူးခြားသော random seed သတ်မှတ်ခြင်း
+    seed_key = sum(ord(c) for c in home_team + away_team)
+    random.seed(seed_key)
+
+    is_home_elite = any(t.lower() in home_team.lower() for t in ELITE_TEAMS)
+    is_away_elite = any(t.lower() in away_team.lower() for t in ELITE_TEAMS)
     
-    if is_home_top and not is_away_top:
-        scores = ["2 - 0", "3 - 1", "3 - 0", "2 - 1"]
-        score = random.choice(scores)
-        h_chance, d_chance, a_chance = "68%", "20%", "12%"
-        advice = f"{home_team} သည် အိမ်ကွင်းအားသာချက်နှင့်အတူ ဧည့်သည် {away_team} ကို ဖိကစားကာ အနိုင်ယူရန် ရေပန်းစားနေသည်။"
-    elif not is_home_top and is_away_top:
-        scores = ["0 - 2", "1 - 2", "0 - 3", "1 - 3"]
-        score = random.choice(scores)
-        h_chance, d_chance, a_chance = "20%", "25%", "55%"
-        advice = f"အသင်းကြီးဖြစ်သည့် {away_team} က အဝေးကွင်းဖြစ်သော်လည်း တိုက်စစ်ပိုင်း အသာစီးဖြင့် ရလဒ်ဖော်ဆောင်နိုင်ချေရှိသည်။"
-    elif is_home_top and is_away_top:
-        scores = ["1 - 1", "2 - 2", "2 - 1", "1 - 2"]
-        score = random.choice(scores)
-        h_chance, d_chance, a_chance = "40%", "35%", "25%"
-        advice = f"ဥရောပထိပ်တန်းအသင်းနှစ်သင်း ထိပ်တိုက်တွေ့ဆုံမှုဖြစ်၍ အကြိတ်အနယ်ရှိပြီး ဂိုးရလဒ် အပြန်အလှန် ထွက်ပေါ်လာနိုင်ပါသည်။"
-    else:
-        scores = ["1 - 0", "0 - 1", "1 - 1", "0 - 0"]
-        score = random.choice(scores)
+    is_home_strong = any(t.lower() in home_team.lower() for t in STRONG_TEAMS)
+    is_away_strong = any(t.lower() in away_team.lower() for t in STRONG_TEAMS)
+
+    # 1. အိမ်ကွင်းအသင်းက အသင်းကြီး / ဧည့်သည်က အသင်းငယ်
+    if is_home_elite and not is_away_elite and not is_away_strong:
+        score = random.choice(["3 - 0", "3 - 1", "4 - 1", "2 - 0"])
+        h_chance, d_chance, a_chance = "75%", "15%", "10%"
+        advice = f"{home_team} သည် အိမ်ကွင်းတွင် တိုက်စစ်အသာစီးဖြင့် ဧည့်သည်ကို ဖိကစားကာ ဂိုးပြတ်အနိုင်ယူရန် ရေပန်းစားနေသည်။"
+
+    # 2. ဧည့်သည်အသင်းက အသင်းကြီး / အိမ်ကွင်းအသင်းက အသင်းငယ်
+    elif not is_home_elite and not is_home_strong and is_away_elite:
+        score = random.choice(["0 - 2", "1 - 3", "0 - 3", "1 - 2"])
+        h_chance, d_chance, a_chance = "18%", "22%", "60%"
+        advice = f"အဝေးကွင်းဖြစ်သော်လည်း ခြေစွမ်းအထွတ်အထိပ်ရောက်နေသည့် {away_team} က ကစားကွက်ကို ဘက်စုံအသာစီးရယူသွားမည်။"
+
+    # 3. အသင်းကြီးနှစ်သင်း ထိပ်တိုက်တွေ့ဆုံခြင်း (Big Match)
+    elif is_home_elite and is_away_elite:
+        score = random.choice(["2 - 2", "1 - 1", "2 - 1", "1 - 2"])
+        h_chance, d_chance, a_chance = "42%", "36%", "22%"
+        advice = f"ဥရောပထိပ်တန်းအသင်းချင်း ထိပ်တိုက်တွေ့ဆုံမှုဖြစ်၍ အကြိတ်အနယ်ရှိပြီး ဂိုးအပြန်အလှန်ဖြင့် သရေကျရန် သို့မဟုတ် အနိုင်အရှုံး အနည်းငယ်ကွာခြားနိုင်ပါသည်။"
+
+    # 4. အကြိတ်အနယ်ရှိမည့် အသင်းလတ်များ တွေ့ဆုံခြင်း
+    elif (is_home_strong or is_home_elite) and (is_away_strong or is_away_elite):
+        score = random.choice(["1 - 1", "2 - 1", "1 - 0", "0 - 0"])
         h_chance, d_chance, a_chance = "45%", "35%", "20%"
-        advice = f"နှစ်သင်း၏ ခြေစွမ်းနီးစပ်သဖြင့် အိမ်ကွင်းဧည့်ကွင်း ရုန်းကန်ရမည့်ပွဲဖြစ်ပြီး အမှားနည်းသူ အနိုင်ရရှိသွားပါမည်။"
+        advice = f"နှစ်သင်း၏ လက်ရှိခြေစွမ်းနှင့် ဖောင်အရ အိမ်ကွင်းအားသာချက်က အဆုံးအဖြတ်ဖြစ်လာနိုင်ချေရှိသည်။"
+
+    # 5. အခြား အသင်းငယ်ချင်း တွေ့ဆုံပွဲများ
+    else:
+        score = random.choice(["1 - 0", "0 - 1", "1 - 1", "0 - 0"])
+        h_chance, d_chance, a_chance = "40%", "38%", "22%"
+        advice = f"ခြေစွမ်းနီးစပ်သည့် အသင်းများဖြစ်သဖြင့် အမှားအယွင်းနည်းသူက ရလဒ်ကောင်းကို ပိုင်ဆိုင်သွားမည်။"
 
     return {
         "predicted_score": score,
@@ -113,7 +131,9 @@ def get_matches():
                                 
                             utc_date = f"{match_date}T{match_time}Z"
                             seen_match_ids.add(event_id)
-                            prediction = smart_ai_prediction(home, away)
+                            
+                            # အသင်းများ၏ အခြေအနေနှင့် ခြေစွမ်းကို အခြေခံ၍ AI ခန့်မှန်းချက်ထုတ်ခြင်း
+                            prediction = advanced_ai_analysis(home, away)
 
                             all_matches.append({
                                 "id": event_id,
