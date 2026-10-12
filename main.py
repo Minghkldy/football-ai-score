@@ -6,7 +6,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# ချန်ပီယံလိဂ်၊ ယူရိုပါလိဂ်၊ ကာရာဘောင်းဖလားနှင့် အခြားလိဂ်များပါ ထည့်သွင်းထားသော TheSportsDB ID များ
+# TheSportsDB တွင် တကယ့်ပွဲစဉ်အစစ်များ ရရှိနိုင်သော လိဂ်နှင့် ဖလားပြိုင်ပွဲ ID များ
 LEAGUES = [
     {"id": "4328", "name": "English Premier League"},
     {"id": "4335", "name": "Spanish La Liga"},
@@ -15,11 +15,9 @@ LEAGUES = [
     {"id": "4334", "name": "French Ligue 1"},
     {"id": "4344", "name": "Portuguese Primeira Liga"},
     {"id": "4351", "name": "Brazilian Serie A"},
-    {"id": "4346", "name": "Dutch Eredivisie"},
     {"id": "4330", "name": "Scottish Premiership"},
     {"id": "4480", "name": "UEFA Champions League"},
-    {"id": "4697", "name": "UEFA Europa League"},
-    {"id": "4391", "name": "Carabao Cup (League Cup)"}
+    {"id": "4697", "name": "UEFA Europa League"}
 ]
 
 def predict_match(home_team, away_team):
@@ -37,6 +35,7 @@ def get_matches():
     
     try:
         for league in LEAGUES:
+            # ၎င်းတို့၏ တရားဝင် endpoint မှ တကယ့်ပွဲစဉ်အစစ်များကို တိုက်ရိုက်ဆွဲထုတ်ခြင်း
             url = f"https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id={league['id']}"
             try:
                 response = requests.get(url, timeout=5)
@@ -46,12 +45,19 @@ def get_matches():
                     
                     if events:
                         for event in events:
-                            home = event.get('strHomeTeam', 'Home Team')
-                            away = event.get('strAwayTeam', 'Away Team')
-                            match_date = event.get('dateEvent', '2026-10-12')
-                            match_time = event.get('strTime', '15:00:00')
-                            utc_date = f"{match_date}T{match_time}Z"
+                            home = event.get('strHomeTeam', '')
+                            away = event.get('strAwayTeam', '')
                             
+                            # မမှန်ကန်သော အားကစား သို့မဟုတ် အမှိုက်အချက်အလက်များ လုံးဝပါမလာစေရန် စစ်ထုတ်ခြင်း
+                            if not home or not away or "Rams" in home or "Bills" in home or "Miami" in home:
+                                continue
+
+                            match_date = event.get('dateEvent', '')
+                            match_time = event.get('strTime', '15:00:00')
+                            if not match_date:
+                                continue
+                                
+                            utc_date = f"{match_date}T{match_time}Z"
                             prediction = predict_match(home, away)
 
                             all_matches.append({
@@ -65,20 +71,6 @@ def get_matches():
                             })
             except requests.exceptions.RequestException:
                 continue
-
-        # အကယ်၍ API မှ ဒေတာ လုံးဝ မရခဲ့ပါက Website မပြိုကျစေရန် နမူနာပွဲစဉ်ပြရန်
-        if not all_matches:
-            all_matches = [
-                {
-                    "id": 1,
-                    "utcDate": "2026-10-12T18:30:00Z",
-                    "status": "SCHEDULED",
-                    "homeTeam": "Arsenal",
-                    "awayTeam": "Chelsea",
-                    "competition": "English Premier League",
-                    "prediction": predict_match("Arsenal", "Chelsea")
-                }
-            ]
 
         return jsonify(all_matches)
 
